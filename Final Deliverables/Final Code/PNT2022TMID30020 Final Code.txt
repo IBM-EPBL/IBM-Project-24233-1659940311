@@ -1,0 +1,123 @@
+#include <ESP8266WiFi.h>
+#include "DHT.h"
+#include <ArduinoJson.h>
+#include <PubSubClient.h>
+
+// Watson IoT connection details
+#define MQTT_HOST "lvlyy2.messaging.internetofthings.ibmcloud.com" //Organization ID.messaging.internetofthings.ibmcloud.com
+//change  3xr4l4
+#define MQTT_PORT 1883
+#define MQTT_DEVICEID "d:lvlyy2:ESP8266:Device1"  //d:Organization ID:Device Type:Device ID
+//change  3xr4l4
+#define MQTT_USER "use-token-auth"
+#define MQTT_TOKEN "Od?)1b3DfEl6B6ALA6" // change your auth_id : 
+#define MQTT_TOPIC "iot-2/evt/status/fmt/json"
+#define MQTT_TOPIC_DISPLAY "iot-2/cmd/display/fmt/json"
+
+// Add GPIO pins used to connect devices
+
+#define DHT_PIN 2 // GPIO pin the data line of the DHT sensor is connected to
+
+// Specify DHT11 (Blue) or DHT22 (White) sensor
+#define DHTTYPE DHT11
+
+
+// Add WiFi connection information
+char ssid[] = "MAKE LABS INDIA";     //  your network SSID (name) 
+char pass[] = "MaruthI7";  // your network password
+float h = 0.0;
+float t = 0.0;
+
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  // handle message arrived
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] : ");
+
+  payload[length] = 0; // ensure valid content is zero terminated so can treat as c-string
+  Serial.println((char *)payload);
+}
+
+void setup() {
+ // Start serial console
+  Serial.begin(9600);
+  Serial.setTimeout(2000);
+  while (!Serial) { }
+  Serial.println();
+  Serial.println("ESP8266 IBM Cloud Application");
+
+  // Start WiFi connection
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, pass);
+  while (WiFi.status() != WL_CONNECTED) 
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(" ");
+  Serial.println("WiFi Connected");
+   Serial.println(WiFi.localIP());
+
+  // Start connected devices
+  dht.begin();
+
+  // Connect to MQTT - IBM Watson IoT Platform
+  if (mqtt.connect(MQTT_DEVICEID, MQTT_USER, MQTT_TOKEN)) {
+    Serial.println("MQTT Connected");
+    mqtt.subscribe(MQTT_TOPIC_DISPLAY);
+
+  }
+
+
+
+void loop() {
+  mqtt.loop();
+  while (!mqtt.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (mqtt.connect(MQTT_DEVICEID, MQTT_USER, MQTT_TOKEN)) {
+      Serial.println("MQTT Connected");
+      mqtt.subscribe(MQTT_TOPIC_DISPLAY);
+      mqtt.loop();
+    } else {
+      Serial.println("MQTT Failed to connect!");
+      delay(5000);
+    }
+  }
+  h = dht.readHumidity();
+  t = dht.readTemperature(); // uncomment this line for centigrade
+  // t = dht.readTemperature(true); // uncomment this line for Fahrenheit
+
+
+
+Serial.print("SCHOOL IN 2KM DETECTED");
+          Serial.print("\n");
+        Serial.print("ALERT !!! ALERT !!! GO SLOW..");
+       if(h>80)
+       {
+        Serial.print("ALERT! THERE IS A HEAVY RAIN, GO SLOW");
+        }
+        delay(2000);
+        Serial.print("SPEED LIMIT SHOULD BE LESS THAN 40KM");
+        Serial.print("\n");
+        Serial.print("ALERT!!! ALERT!! GO SLOW..");
+        delay(2000);
+        Serial.print("HOSPITAL IN 50KM DETECTED");
+        Serial.print("\n");
+        Serial.print("ALERT !!! ALERT !!! GO SLOW..");
+        Serial.print("\n");
+        Serial.print("TAKE DIVERSION ROAD WORK IN PROGRESS");
+              
+    if (!mqtt.publish(MQTT_TOPIC, msg)) {
+      Serial.println("MQTT Publish failed");
+    }
+  }
+
+  // Pause - but keep polling MQTT for incoming messages
+  for (int i = 0; i < 10; i++) {
+    mqtt.loop();
+    delay(1000);
+  }
+}
